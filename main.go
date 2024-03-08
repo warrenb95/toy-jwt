@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
 	"errors"
 	"fmt"
@@ -11,10 +14,12 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
 	currentKeyID = ""
+	secretKey    = "super secret key ;)"
 )
 
 type key struct {
@@ -35,7 +40,7 @@ func (u *userClaims) Validate() error {
 	return nil
 }
 
-func createToken(keys map[string]key) func(w http.ResponseWriter, r *http.Request) {
+func createToken(keys map[string]key) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Create a new token object, specifying signing method and the claims
 		// you would like it to contain.
@@ -54,7 +59,7 @@ func createToken(keys map[string]key) func(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func parseToken(keys map[string]key) func(w http.ResponseWriter, r *http.Request) {
+func parseToken(keys map[string]key) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		jwtToken := r.Header.Get("authorization")
 
@@ -112,6 +117,81 @@ func generateKey(keys map[string]key) error {
 	return nil
 }
 
+func encryptHandler(key []byte) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "failed to read body", http.StatusInternalServerError)
+		}
+
+		encryptedMsg, err := encrypt(key, body)
+		if err != nil {
+			http.Error(w, "failed to encrypt body", http.StatusInternalServerError)
+		}
+
+		fmt.Fprintf(w, "encrypted body %s\n", encryptedMsg)
+	}
+}
+
+func decryptHandler(key []byte) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "failed to read body", http.StatusInternalServerError)
+		}
+
+		encryptedMsg, err := encrypt(key, body)
+		if err != nil {
+			http.Error(w, "failed to decrypt body", http.StatusInternalServerError)
+		}
+
+		fmt.Fprintf(w, "decrypted body %s\n", encryptedMsg)
+	}
+}
+
+func decrypt(key, encryptedInput []byte) ([]byte, error) {
+	bCipher, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, fmt.Errorf("creating cipher while decrypting: %w", err)
+	}
+
+	inBuffer := bytes.NewBuffer(encryptedInput)
+	s := cipher.NewCTR(bCipher, make([]byte, aes.BlockSize))
+	streamR := &cipher.StreamReader{
+		S: s,
+		R: inBuffer,
+	}
+
+	var decryptedBuffer []byte
+	_, err = streamR.Read(decryptedBuffer)
+	if err != nil {
+		return nil, fmt.Errorf("reading into out buffer: %v", err)
+	}
+
+	return decryptedBuffer, nil
+}
+
+func encrypt(key, input []byte) ([]byte, error) {
+	bCipher, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, fmt.Errorf("creating cipher while encrypting: %w", err)
+	}
+
+	buf := new(bytes.Buffer)
+	s := cipher.NewCTR(bCipher, make([]byte, aes.BlockSize))
+	streamW := &cipher.StreamWriter{
+		S: s,
+		W: buf,
+	}
+
+	_, err = streamW.Write(input)
+	if err != nil {
+		return nil, fmt.Errorf("writing to encrypt stream: %v", err)
+	}
+
+	return buf.Bytes(), nil
+}
+
 func main() {
 	keys := make(map[string]key)
 	err := generateKey(keys)
@@ -130,9 +210,17 @@ func main() {
 		}
 	}()
 
+	myCipherKey, err := bcrypt.GenerateFromPassword([]byte(secretKey), bcrypt.DefaultCost)
+	if err != nil {
+		log.Fatalf("failed to generate key: %v", err)
+	}
+	myCipherKey = myCipherKey[:16] // Only need 16 bytes
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", createToken(keys))
 	mux.HandleFunc("/parse-token", parseToken(keys))
+	mux.HandleFunc("/encrypt", encryptHandler(myCipherKey))
+	mux.HandleFunc("/decrypt", decryptHandler(myCipherKey))
 
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
