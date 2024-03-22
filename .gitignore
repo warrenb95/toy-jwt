@@ -20,5 +20,5 @@
 # Go workspace file
 go.work
 
-/tmp
-.air.toml
+tmp/
+*.air.toml
