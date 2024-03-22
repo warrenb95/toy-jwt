@@ -1,4 +1,4 @@
-module github/warrenb95/toy-jwt
+module github.com/warrenb95/toy-jwt
 
 go 1.21.4
 
