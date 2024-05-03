@@ -39,11 +39,14 @@ func main() {
 	}
 	myCipherKey = myCipherKey[:16] // Only need 16 bytes
 
+	// TODO: add mux for auth routes??
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", apihttp.CreateToken(keys))
 	mux.HandleFunc("/parse-token", apihttp.ParseToken(keys))
 	mux.HandleFunc("/encrypt", apihttp.EncryptHandler(myCipherKey))
 	mux.HandleFunc("/decrypt", apihttp.DecryptHandler(myCipherKey))
+	mux.HandleFunc("/sign-up", apihttp.SignupHandler)
+	mux.HandleFunc("/auth/callback", apihttp.AuthCallback)
 
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
