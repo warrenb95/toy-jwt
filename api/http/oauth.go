@@ -36,9 +36,10 @@ var conf = &oauth2.Config{
 	ClientID:     os.Getenv("GIT_OAUTH_CLIENT_ID"),
 	ClientSecret: os.Getenv("GIT_OAUTH_CLIENT_SECRET"),
 	Endpoint:     github.Endpoint,
+	RedirectURL:  "http://127.0.0.1/oauth2/receive",
 }
 
-func SignupHandler(w http.ResponseWriter, r *http.Request) {
+func GithubOAuth2Handler(w http.ResponseWriter, r *http.Request) {
 	sessionID := uuid.NewString()
 	if sessions == nil {
 		sessions = make(map[string]session)
@@ -48,10 +49,10 @@ func SignupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	url := conf.AuthCodeURL(sessionID)
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+	http.Redirect(w, r, url, http.StatusSeeOther)
 }
 
-func AuthCallback(w http.ResponseWriter, r *http.Request) {
+func OAuth2Reveive(w http.ResponseWriter, r *http.Request) {
 	// TODO: get the 'code' param
 	code := r.Form.Get("code")
 	if code == "" {

@@ -41,12 +41,13 @@ func main() {
 
 	// TODO: add mux for auth routes??
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", apihttp.CreateToken(keys))
-	mux.HandleFunc("/parse-token", apihttp.ParseToken(keys))
-	mux.HandleFunc("/encrypt", apihttp.EncryptHandler(myCipherKey))
-	mux.HandleFunc("/decrypt", apihttp.DecryptHandler(myCipherKey))
-	mux.HandleFunc("/sign-up", apihttp.SignupHandler)
-	mux.HandleFunc("/auth/callback", apihttp.AuthCallback)
+	// TODO: create index with login button
+	mux.HandleFunc("/token/create", apihttp.CreateToken(keys))
+	mux.HandleFunc("/token/parse", apihttp.ParseToken(keys))
+	mux.HandleFunc("/data/encrypt", apihttp.EncryptHandler(myCipherKey))
+	mux.HandleFunc("/data/decrypt", apihttp.DecryptHandler(myCipherKey))
+	mux.HandleFunc("/oauth2/github", apihttp.GithubOAuth2Handler)
+	mux.HandleFunc("/oauth2/receive", apihttp.OAuth2Reveive)
 
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
