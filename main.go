@@ -1,10 +1,12 @@
 package main
 
 import (
+	"html/template"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 
 	apihttp "github.com/warrenb95/toy-jwt/api/http"
@@ -16,10 +18,11 @@ var (
 )
 
 func main() {
+	logger := logrus.New()
 	keys := make(map[string]generator.Key)
 	err := generator.Generate(keys)
 	if err != nil {
-		log.Fatalf("failed to generate key: %v", err)
+		logger.WithError(err).Fatal("failed to generate key")
 	}
 
 	go func() {
@@ -28,7 +31,7 @@ func main() {
 			<-ticker.C
 			err := generator.Generate(keys)
 			if err != nil {
-				log.Fatalf("failed to generate key: %v", err)
+				logger.WithError(err).Fatal("failed to generate key")
 			}
 		}
 	}()
@@ -39,9 +42,10 @@ func main() {
 	}
 	myCipherKey = myCipherKey[:16] // Only need 16 bytes
 
-	// TODO: add mux for auth routes??
+	tmpl := template.Must(template.ParseGlob("./views/*"))
+
 	mux := http.NewServeMux()
-	// TODO: create index with login button
+	mux.HandleFunc("/", apihttp.Index(logger, tmpl))
 	mux.HandleFunc("/token/create", apihttp.CreateToken(keys))
 	mux.HandleFunc("/token/parse", apihttp.ParseToken(keys))
 	mux.HandleFunc("/data/encrypt", apihttp.EncryptHandler(myCipherKey))

@@ -4,6 +4,9 @@ github.com/golang-jwt/jwt/v5
 # github.com/google/uuid v1.6.0
 ## explicit
 github.com/google/uuid
+# github.com/sirupsen/logrus v1.9.3
+## explicit; go 1.13
+github.com/sirupsen/logrus
 # golang.org/x/crypto v0.21.0
 ## explicit; go 1.18
 golang.org/x/crypto/bcrypt
@@ -14,3 +17,7 @@ golang.org/x/oauth2
 golang.org/x/oauth2/endpoints
 golang.org/x/oauth2/github
 golang.org/x/oauth2/internal
+# golang.org/x/sys v0.18.0
+## explicit; go 1.18
+golang.org/x/sys/unix
+golang.org/x/sys/windows
