@@ -2,9 +2,11 @@ package http
 
 import (
 	"context"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,14 +27,18 @@ const (
 	expired
 )
 
-type session struct {
+type loginSession struct {
 	token      string
 	expiration time.Time
 	state      loginState
 }
 
-// sessions user session_id to expiration map
-var sessions map[string]*session
+var (
+	// logins user session_id to expiration map
+	logins map[string]*loginSession
+
+	githubGraphQLURL = "https://api.github.com/graphql"
+)
 
 var conf = &oauth2.Config{
 	ClientID:     os.Getenv("GIT_OAUTH_CLIENT_ID"),
@@ -43,10 +49,10 @@ var conf = &oauth2.Config{
 
 func GithubOAuth2Handler(w http.ResponseWriter, r *http.Request) {
 	sessionID := uuid.NewString()
-	if sessions == nil {
-		sessions = make(map[string]*session)
+	if logins == nil {
+		logins = make(map[string]*loginSession)
 	}
-	sessions[sessionID] = &session{
+	logins[sessionID] = &loginSession{
 		state: requested,
 	}
 
@@ -65,9 +71,9 @@ func OAuth2Reveive(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: validate the state query param
 	state := queryParams.Get("state")
-	if _, ok := sessions[state]; ok {
+	if _, ok := logins[state]; ok {
 		log.Println("session found: ", state)
-		sessions[state] = &session{
+		logins[state] = &loginSession{
 			state: codeRequested,
 		}
 	} else {
@@ -78,6 +84,22 @@ func OAuth2Reveive(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	log.Printf("token: %s\n", tok.AccessToken)
+
+	ts := conf.TokenSource(r.Context(), tok)
+
+	client := oauth2.NewClient(r.Context(), ts)
+	requestBody := strings.NewReader(`{"query": "query {viewer {id}}"}`)
+	response, err := client.Post(githubGraphQLURL, "application/json", requestBody)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer response.Body.Close()
+
+	respBytes, err := io.ReadAll(response.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println(string(respBytes))
 }
