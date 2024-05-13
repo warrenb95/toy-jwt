@@ -53,5 +53,5 @@ func main() {
 	mux.HandleFunc("/oauth2/github", apihttp.GithubOAuth2Handler)
 	mux.HandleFunc("/oauth2/receive", apihttp.OAuth2Reveive)
 
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	log.Fatal(http.ListenAndServe("127.0.0.1:8080", mux))
 }
