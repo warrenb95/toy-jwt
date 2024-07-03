@@ -51,7 +51,7 @@ func main() {
 	mux.HandleFunc("/data/encrypt", apihttp.EncryptHandler(myCipherKey))
 	mux.HandleFunc("/data/decrypt", apihttp.DecryptHandler(myCipherKey))
 	mux.HandleFunc("/oauth2/github", apihttp.GithubOAuth2Handler)
-	mux.HandleFunc("/oauth2/receive", apihttp.OAuth2Reveive)
+	mux.HandleFunc("/oauth2/receive", apihttp.OAuth2Receive)
 
 	log.Fatal(http.ListenAndServe("127.0.0.1:8080", mux))
 }

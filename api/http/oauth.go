@@ -1,7 +1,7 @@
 package http
 
 import (
-	"context"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -38,14 +38,14 @@ var (
 	logins map[string]*loginSession
 
 	githubGraphQLURL = "https://api.github.com/graphql"
-)
 
-var conf = &oauth2.Config{
-	ClientID:     os.Getenv("GIT_OAUTH_CLIENT_ID"),
-	ClientSecret: os.Getenv("GIT_OAUTH_CLIENT_SECRET"),
-	Endpoint:     github.Endpoint,
-	// RedirectURL:  "http://127.0.0.1/oauth2/receive",
-}
+	conf = &oauth2.Config{
+		ClientID:     os.Getenv("GIT_OAUTH_CLIENT_ID"),
+		ClientSecret: os.Getenv("GIT_OAUTH_CLIENT_SECRET"),
+		Endpoint:     github.Endpoint,
+		// RedirectURL:  "http://127.0.0.1/oauth2/receive",
+	}
+)
 
 func GithubOAuth2Handler(w http.ResponseWriter, r *http.Request) {
 	sessionID := uuid.NewString()
@@ -60,7 +60,7 @@ func GithubOAuth2Handler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url, http.StatusSeeOther)
 }
 
-func OAuth2Reveive(w http.ResponseWriter, r *http.Request) {
+func OAuth2Receive(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 
 	code := queryParams.Get("code")
@@ -80,7 +80,7 @@ func OAuth2Reveive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tok, err := conf.Exchange(context.Background(), code)
+	tok, err := conf.Exchange(r.Context(), code)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -101,5 +101,5 @@ func OAuth2Reveive(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 
-	log.Println(string(respBytes))
+	fmt.Fprintf(w, "OAuth client created\ngithubGraphQLURL response body: %s", respBytes)
 }
