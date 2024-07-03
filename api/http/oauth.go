@@ -44,6 +44,7 @@ var (
 		ClientSecret: os.Getenv("GIT_OAUTH_CLIENT_SECRET"),
 		Endpoint:     github.Endpoint,
 		// RedirectURL:  "http://127.0.0.1/oauth2/receive",
+		Scopes: []string{"user:email", "user:name", "user:login"},
 	}
 )
 
@@ -89,7 +90,7 @@ func OAuth2Receive(w http.ResponseWriter, r *http.Request) {
 	ts := conf.TokenSource(r.Context(), tok)
 
 	client := oauth2.NewClient(r.Context(), ts)
-	requestBody := strings.NewReader(`{"query": "query {viewer {id}}"}`)
+	requestBody := strings.NewReader(`{"query": "query {viewer {id, email, login}}"}`)
 	response, err := client.Post(githubGraphQLURL, "application/json", requestBody)
 	if err != nil {
 		log.Fatal(err)
